@@ -8,9 +8,10 @@ CopilotKit v2 and a Python Deep Agents supervisor.
 - A shared, versioned contract for form context, partial patches, option
   discovery, refresh outcomes, validation, and guidance.
 - A reusable React bridge that synchronizes a serializable `{ jsx, idfConfig }`
-  source through CopilotKit v2 shared agent state.
+  source and registers form operations as CopilotKit v2 frontend tools.
 - A Python Deep Agent supervisor with Domain, Form Intelligence, and Filling
-  specialists. The graph is read-only and exposes no frontend mutation tools.
+  specialists. CopilotKit exposes frontend tools only to the Filling specialist;
+  the supervisor, Domain, and Form Intelligence agents cannot call them.
 - A backend-only Form Intelligence index with tree-sitter TSX parsing,
   precomputed navigation paths, flattened IDFConfig records, and RapidFuzz
   retrieval. Raw JSX and IDFConfig state is removed before any model call.

@@ -8,6 +8,7 @@ import type {
 } from "@adaptive-form-guide/contracts";
 
 import {
+  createAdaptiveFormFrontendTools,
   createFormIntelligenceState,
   createFrontendToolHandlers,
   type FormAdapter,
@@ -55,6 +56,22 @@ function adapter(): FormAdapter {
 }
 
 describe("frontend tool handlers", () => {
+  it("registers form operations as CopilotKit frontend tools", () => {
+    const tools = createAdaptiveFormFrontendTools(
+      adapter(),
+      "adaptive_form_guide",
+    );
+
+    expect(tools.map((tool) => tool.name)).toEqual([
+      "setFormState",
+      "getDropdownOptions",
+      "searchInputOptions",
+    ]);
+    expect(tools.every((tool) => tool.agentId === "adaptive_form_guide")).toBe(
+      true,
+    );
+  });
+
   it("publishes raw form intelligence data in shared agent state", () => {
     const source = {
       formId: "test",

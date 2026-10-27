@@ -2,13 +2,25 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Attach to Python backend (5678)",
+      "name": "Debug Python backend",
       "type": "debugpy",
-      "request": "attach",
-      "connect": {
-        "host": "localhost",
-        "port": 5678
-      },
+      "request": "launch",
+      "python": "${workspaceFolder}/apps/agent/.venv/bin/python",
+      "module": "uvicorn",
+      "args": [
+        "adaptive_form_agent.api:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--env-file",
+        ".env",
+        "--log-level",
+        "debug"
+      ],
+      "cwd": "${workspaceFolder}/apps/agent",
+      "envFile": "${workspaceFolder}/apps/agent/.env",
+      "console": "integratedTerminal",
       "justMyCode": true
     }
   ]

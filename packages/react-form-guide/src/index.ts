@@ -1,7 +1,12 @@
-import { useAgent, UseAgentUpdate } from "@copilotkit/react-core/v2";
+import {
+  useAgent,
+  useFrontendTools,
+  UseAgentUpdate,
+} from "@copilotkit/react-core/v2";
 import { useEffect, useSyncExternalStore } from "react";
 
 import {
+  createAdaptiveFormFrontendTools,
   createFormIntelligenceState,
   createFrontendToolHandlers,
   type FormAdapter,
@@ -9,6 +14,7 @@ import {
 } from "./core";
 
 export {
+  createAdaptiveFormFrontendTools,
   createFormIntelligenceState,
   createFrontendToolHandlers,
   type FormAdapter,
@@ -23,7 +29,7 @@ export interface AdaptiveFormGuideBridgeProps {
 }
 
 /**
- * Synchronizes a backend-only Form Intelligence source through AG-UI state.
+ * Synchronizes Form Intelligence state and registers browser-side form tools.
  * The component renders nothing and should be mounted below CopilotKit.
  */
 export function AdaptiveFormGuideBridge({
@@ -56,6 +62,11 @@ export function AdaptiveFormGuideBridge({
     intelligenceSource,
     isReady,
   ]);
+
+  useFrontendTools(
+    createAdaptiveFormFrontendTools(adapter, agentId),
+    [adapter, agentId],
+  );
 
   return null;
 }

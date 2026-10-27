@@ -1,5 +1,5 @@
 from typing import Awaitable, Callable
-from copilotkit import LangGraphAGUIAgent
+from copilotkit import CopilotKitMiddleware, LangGraphAGUIAgent
 from deepagents import create_deep_agent
 from langgraph.checkpoint.memory import InMemorySaver
 from langchain.agents.middleware import (
@@ -22,12 +22,6 @@ from .prompts import (
 )
 from .settings import settings
 
-@wrap_model_call
-async def model_call(
-    request: ModelRequest,
-    handler: Callable[[ModelRequest], Awaitable[ModelResponse]],
-) -> ModelResponse:
-    return await handler(request)
 
 def build_graph(model=None, subagent_model=None):
     """Build the Deep Agent graph without invoking a model."""
@@ -46,7 +40,6 @@ def build_graph(model=None, subagent_model=None):
             "system_prompt": DOMAIN_PROMPT,
             "response_format": DomainReport,
             "tools": [],
-            "middleware": [model_call],
         },
         {
             "name": "form_intelligence",
@@ -58,18 +51,17 @@ def build_graph(model=None, subagent_model=None):
             "system_prompt": FORM_INTELLIGENCE_PROMPT,
             "response_format": FormIntelligenceReport,
             "tools": FORM_INTELLIGENCE_TOOLS,
-            "middleware": [model_call],
         },
         {
             "name": "filling",
             "description": (
-                "Produces staged typed patches or option-discovery requests; never "
-                "executes browser tools directly."
+                "Fills fields through the browser tools supplied by CopilotKit."
             ),
             "model": filling_model,
             "system_prompt": FILLING_PROMPT,
             "response_format": FillingDecision,
             "tools": [],
+            "middleware": [CopilotKitMiddleware()],
         },
     ]
 

@@ -22,33 +22,20 @@ function DemoForm({ chat }: { chat?: ReactNode }) {
     adapter.getContext,
     adapter.getContext,
   );
-  const [events, setEvents] = useState<string[]>([
-    "Ready — ask the guide or run the deterministic walkthrough.",
-  ]);
   const [running, setRunning] = useState(false);
 
-  const log = (message: string) =>
-    setEvents((current) => [...current, message]);
-
   const updateField = async (componentName: string, value: string) => {
-    const result = await adapter.setFormState({
+    await adapter.setFormState({
       patches: [{ componentName, value }],
       expectedRevision: adapter.getContext().configRevision,
       sideEffectIntent: "allow-config-refresh",
     });
-    log(`${componentName}: ${result.status} (revision ${result.configRevision})`);
   };
 
   const runWalkthrough = async () => {
     setRunning(true);
-    setEvents([]);
     adapter.reset();
     const tools = createFrontendToolHandlers(adapter);
-
-    log("Supervisor → Domain: interpret subsidiary details.");
-    log("Domain → Supervisor: a subsidiary requires legal name and jurisdiction.");
-    log("Supervisor → Form Intelligence: locate controlling dependencies.");
-    log("Form Intelligence: hasSubsidiary controls three hidden fields.");
 
     const controlling = await tools.setFormState({
       patches: [
@@ -61,17 +48,12 @@ function DemoForm({ chat }: { chat?: ReactNode }) {
       expectedRevision: adapter.getContext().configRevision,
       sideEffectIntent: "allow-config-refresh",
     });
-    log(
-      `Java-style onChange refreshed ${controlling.changedComponents.length} components; revision ${controlling.configRevision}.`,
-    );
-    log("Supervisor → Form Intelligence: reassess refreshed configuration.");
 
     const countryOptions = await tools.getDropdownOptions({
       componentName: "subsidiaryCountry",
       expectedRevision: controlling.configRevision,
       page: 1,
     });
-    log(`Dropdown tool returned ${countryOptions.options.length} valid countries.`);
 
     const parentMatches = await tools.searchInputOptions({
       componentName: "parentCompany",
@@ -79,9 +61,8 @@ function DemoForm({ chat }: { chat?: ReactNode }) {
       term: "glob",
       page: 1,
     });
-    log(`Search tool matched ${parentMatches.options[0]?.label ?? "nothing"}.`);
 
-    const completed = await tools.setFormState({
+    await tools.setFormState({
       patches: [
         { componentName: "subsidiaryName", value: "Acme UK Ltd" },
         { componentName: "subsidiaryCountry", value: countryOptions.options[0]?.id ?? "GB" },
@@ -90,8 +71,6 @@ function DemoForm({ chat }: { chat?: ReactNode }) {
       expectedRevision: controlling.configRevision,
       sideEffectIntent: "allow-config-refresh",
     });
-    log(`Remaining patch ${completed.status}; revision ${completed.configRevision}.`);
-    log("Supervisor → User: subsidiary details completed with no unresolved items.");
     setRunning(false);
   };
 
@@ -110,6 +89,29 @@ function DemoForm({ chat }: { chat?: ReactNode }) {
       </header>
 
       <div className="workspace">
+        <section className="panel chat-panel" aria-label="Form guide chat">
+          <div className="panel-heading">
+            <h2>Form guide chat</h2>
+            <span>{chat ? "Connected" : "Runtime not configured"}</span>
+          </div>
+          {chat ?? (
+            <div className="chat-disabled">
+              <div>
+                <strong>Live chat is disabled</strong>
+                <p>
+                  Set <code>OPENAI_API_KEY</code> for the Python service and start
+                  the frontend with <code>VITE_AGENT_URL</code>.
+                </p>
+              </div>
+              <textarea
+                aria-label="Chat message"
+                disabled
+                placeholder="Ask the guide to fill this form…"
+              />
+            </div>
+          )}
+        </section>
+
         <section className="panel form-panel" aria-label="Dynamic form">
           <div className="panel-heading">
             <h2>Dynamic form</h2>
@@ -165,42 +167,7 @@ function DemoForm({ chat }: { chat?: ReactNode }) {
             </button>
           </div>
         </section>
-
-        <aside className="panel trace-panel" aria-label="Agent trace">
-          <div className="panel-heading">
-            <h2>Supervisor trace</h2>
-            <span>Deep Agents</span>
-          </div>
-          <ol>
-            {events.map((event, index) => (
-              <li key={`${index}-${event}`}>{event}</li>
-            ))}
-          </ol>
-        </aside>
       </div>
-
-      <section className="panel chat-panel" aria-label="Form guide chat">
-        <div className="panel-heading">
-          <h2>Form guide chat</h2>
-          <span>{chat ? "Connected" : "Runtime not configured"}</span>
-        </div>
-        {chat ?? (
-          <div className="chat-disabled">
-            <div>
-              <strong>Live chat is disabled</strong>
-              <p>
-                Set <code>OPENAI_API_KEY</code> for the Python service and start
-                the frontend with <code>VITE_AGENT_URL</code>.
-              </p>
-            </div>
-            <textarea
-              aria-label="Chat message"
-              disabled
-              placeholder="Ask the guide to fill this form…"
-            />
-          </div>
-        )}
-      </section>
 
       <footer>
         Frontend tools stay in React; datasource access stays in the Java service boundary.

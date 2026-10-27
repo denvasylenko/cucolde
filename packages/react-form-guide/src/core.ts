@@ -62,3 +62,36 @@ export function createFrontendToolHandlers(adapter: FormAdapter) {
     },
   };
 }
+
+export function createAdaptiveFormFrontendTools(
+  adapter: FormAdapter,
+  agentId?: string,
+) {
+  const handlers = createFrontendToolHandlers(adapter);
+  return [
+    {
+      name: "setFormState",
+      description:
+        "Apply typed field patches in the browser using the current configuration revision.",
+      parameters: setFormStateRequestSchema,
+      handler: handlers.setFormState,
+      agentId,
+    },
+    {
+      name: "getDropdownOptions",
+      description:
+        "Get valid dropdown options for a component from the frontend data source.",
+      parameters: optionQuerySchema,
+      handler: handlers.getDropdownOptions,
+      agentId,
+    },
+    {
+      name: "searchInputOptions",
+      description:
+        "Search valid options for a search-input component using at least two characters.",
+      parameters: optionQuerySchema,
+      handler: handlers.searchInputOptions,
+      agentId,
+    },
+  ];
+}
