@@ -1,0 +1,17 @@
+{
+  "name": "adaptive-form-guide",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/demo",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace @adaptive-form-guide/contracts && npm run build --workspace @adaptive-form-guide/react && npm run build --workspace @adaptive-form-guide/demo",
+    "test": "npm run test --workspaces --if-present",
+    "test:e2e": "npm run test:e2e --workspace @adaptive-form-guide/demo",
+    "typecheck": "npm run build --workspace @adaptive-form-guide/contracts && npm run typecheck --workspace @adaptive-form-guide/react && npm run typecheck --workspace @adaptive-form-guide/demo",
+    "dev": "npm run dev --workspace @adaptive-form-guide/demo"
+  }
+}

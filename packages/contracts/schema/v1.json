@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://adaptive-form-guide.local/contracts/v1.json",
+  "title": "Adaptive Form Guide Contracts",
+  "type": "object",
+  "$defs": {
+    "jsonValue": {
+      "anyOf": [
+        { "type": "string" },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" },
+        { "type": "array", "items": { "$ref": "#/$defs/jsonValue" } },
+        {
+          "type": "object",
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
+      ]
+    },
+    "choice": {
+      "type": "object",
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "disabled": { "type": "boolean", "default": false }
+      },
+      "additionalProperties": false
+    },
+    "fieldDescriptor": {
+      "type": "object",
+      "required": ["componentName", "kind", "label"],
+      "properties": {
+        "componentName": { "type": "string", "minLength": 1 },
+        "kind": {
+          "enum": ["text", "textarea", "radio", "checkbox", "date", "dropdown", "search", "group", "unknown"]
+        },
+        "label": { "type": "string" },
+        "helpText": { "type": "string" },
+        "value": { "$ref": "#/$defs/jsonValue" },
+        "required": { "type": "boolean", "default": false },
+        "disabled": { "type": "boolean", "default": false },
+        "visible": { "type": "boolean", "default": true },
+        "sensitive": { "type": "boolean", "default": false },
+        "errors": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "dependsOn": { "type": "array", "items": { "type": "string" }, "default": [] },
+        "choiceMode": {
+          "enum": ["none", "static", "dropdown", "search", "unknown"],
+          "default": "none"
+        },
+        "staticOptions": { "type": "array", "items": { "$ref": "#/$defs/choice" } }
+      },
+      "additionalProperties": false
+    },
+    "fieldPatch": {
+      "type": "object",
+      "required": ["componentName", "value"],
+      "properties": {
+        "componentName": { "type": "string", "minLength": 1 },
+        "value": { "$ref": "#/$defs/jsonValue" },
+        "reason": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "setFormStateRequest": {
+      "type": "object",
+      "required": ["patches", "expectedRevision"],
+      "properties": {
+        "patches": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/fieldPatch" }
+        },
+        "expectedRevision": { "type": "integer", "minimum": 0 },
+        "sideEffectIntent": {
+          "enum": ["allow-config-refresh", "suppress"],
+          "default": "allow-config-refresh"
+        }
+      },
+      "additionalProperties": false
+    },
+    "optionQuery": {
+      "type": "object",
+      "required": ["componentName", "expectedRevision"],
+      "properties": {
+        "componentName": { "type": "string", "minLength": 1 },
+        "expectedRevision": { "type": "integer", "minimum": 0 },
+        "term": { "type": "string" },
+        "page": { "type": "integer", "minimum": 1, "default": 1 }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "contractVersion": { "const": "1.0" }
+  }
+}
