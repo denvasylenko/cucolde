@@ -3,9 +3,9 @@ from adaptive_form_agent.form_intelligence.tools import FORM_INTELLIGENCE_TOOLS
 
 JSX = """
 <Form componentName="businessForm">
-  <Section componentName="companySection" title="Company">
-    <Accordion componentName="detailsAccordion" label="Details">
-      <TextField componentName="companyName" label={dynamicLabel} />
+  <Section componentName="companySection">
+    <Accordion componentName="detailsAccordion">
+      <TextField componentName={"companyName"} />
       <Select componentName="country" />
     </Accordion>
   </Section>
@@ -16,19 +16,24 @@ JSX = """
 def config(country_visible: bool = False) -> dict:
     return {
         "props": {
+            "businessForm": {"kind": "form", "label": "Business"},
+            "companySection": {"kind": "section", "label": "Company"},
+            "detailsAccordion": {"kind": "accordion", "label": "Details"},
             "companyName": {
+                "kind": "text",
                 "label": "Company name",
                 "visible": True,
                 "sensitive": True,
             },
             "country": {
+                "kind": "dropdown",
                 "label": "Country of registration",
                 "visible": country_visible,
             },
         },
         "state": {"companyName": "Secret Corp", "country": "UA"},
         "actions": [{"componentName": "companyName", "event": "onChange"}],
-        "events": {},
+        "events": {"onChange": {"companyName": True}},
     }
 
 
@@ -36,61 +41,62 @@ def engine() -> FormIntelligenceEngine:
     return FormIntelligenceEngine(JSX, config())
 
 
-def test_search_uses_component_labels_and_names():
+def test_search_returns_the_complete_flat_component():
     result = engine().search_components("country registration")
-    assert result["matches"][0]["componentName"] == "country"
+    match = result["matches"][0]
 
-
-def test_inspection_is_explicit_and_redacts_sensitive_state():
-    result = engine().inspect_component("companyName")
-    component = result["component"]
-
-    assert result["found"] is True
-    assert component["parent"] == "detailsAccordion"
-    assert component["label"] == "Company name"
-    assert component["visibility"] == "visible"
-    assert component["onChangeConfigured"] is True
-    assert component["currentState"] is None
-    assert component["hasState"] is False
-    assert any("Dynamic JSX attribute" in item for item in result["warnings"])
-    assert any("Sensitive current state" in item for item in result["warnings"])
-
-
-def test_unknown_visibility_and_missing_components_are_reported():
-    section = engine().inspect_component("companySection")
-    assert section["component"]["visibility"] == "unknown"
-    assert section["component"]["onChangeConfigured"] is False
-
-    missing = engine().inspect_component("missing")
-    assert missing["found"] is False
-    assert missing["warnings"]
-
-
-def test_navigation_uses_jsx_parent_chain():
-    result = engine().get_navigation_path("country")
-    assert [item["componentName"] for item in result["path"]] == [
+    assert match["name"] == "country"
+    assert match["tag"] == "Select"
+    assert match["path"] == (
         "businessForm",
         "companySection",
         "detailsAccordion",
         "country",
-    ]
+    )
+    assert match["props"]["visible"] is False
+    assert match["state"] == "UA"
+    assert match["actions"] == ()
+    assert match["on_change"] is False
+
+
+def test_search_returns_actions_and_redacts_sensitive_state():
+    result = engine().search_components("companyName")
+    match = result["matches"][0]
+
+    assert match["name"] == "companyName"
+    assert match["state"] is None
+    assert match["actions"] == (
+        {"componentName": "companyName", "event": "onChange"},
+    )
+    assert match["on_change"] is True
 
 
 def test_config_update_does_not_reparse_jsx():
     instance = engine()
-    components = instance.components
+    jsx_index = instance.jsx_index
     instance.update_config(config(country_visible=True))
 
-    assert instance.components is components
-    assert instance.inspect_component("country")["component"]["visibility"] == "visible"
+    assert instance.jsx_index is jsx_index
+    country = instance.search_components("country")["matches"][0]
+    assert country["props"]["visible"] is True
 
 
-def test_exactly_three_tools_are_exposed_without_runtime_in_the_llm_schema():
+def test_get_component_uses_exact_component_name():
+    instance = engine()
+
+    component = instance.get_component("country")
+
+    assert component is not None
+    assert component["name"] == "country"
+    assert component["path"][-2:] == ("detailsAccordion", "country")
+    assert instance.get_component("missing") is None
+
+
+def test_search_and_get_component_are_exposed_to_the_agent():
     assert [tool.name for tool in FORM_INTELLIGENCE_TOOLS] == [
         "search_components",
-        "inspect_component",
-        "get_navigation_path",
+        "get_component",
     ]
-    for intelligence_tool in FORM_INTELLIGENCE_TOOLS:
-        properties = intelligence_tool.tool_call_schema.model_json_schema()["properties"]
+    for tool in FORM_INTELLIGENCE_TOOLS:
+        properties = tool.tool_call_schema.model_json_schema()["properties"]
         assert "runtime" not in properties

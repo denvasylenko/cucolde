@@ -12,9 +12,8 @@ CopilotKit v2 and a Python Deep Agents supervisor.
 - A Python Deep Agent supervisor with Domain, Form Intelligence, and Filling
   specialists. The graph is read-only and exposes no frontend mutation tools.
 - A backend-only Form Intelligence index with tree-sitter TSX parsing,
-  parent-chain navigation, and RapidFuzz retrieval. Callers can optionally
-  supply an embedding function. Raw JSX and IDFConfig context is removed before
-  any model call.
+  precomputed navigation paths, flattened IDFConfig records, and RapidFuzz
+  retrieval. Raw JSX and IDFConfig state is removed before any model call.
 - A demo DynamicForm adapter that reproduces a Java-backed `onChange` refresh:
   the controlling `hasSubsidiary` patch reveals dependent fields, increments
   `configRevision`, and forces reassessment before the remaining patch.

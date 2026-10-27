@@ -8,7 +8,12 @@ def test_ingestion_indexes_shared_state_and_clears_large_input():
     tools._ENGINES.clear()
     payload = {
         "jsx": '<Field componentName="name" />',
-        "idfConfig": {"props": {"name": {"label": "Name", "visible": True}}},
+        "idfConfig": {
+            "props": {"name": {"label": "Name", "visible": True}},
+            "state": {},
+            "actions": [],
+            "events": {"onChange": {}},
+        },
         "formId": "test",
     }
     state = {
@@ -29,7 +34,7 @@ def test_ingestion_indexes_shared_state_and_clears_large_input():
     assert update == {"formIntelligenceInput": None}
     indexed = tools.get_engine("thread-123")
     assert indexed is not None
-    assert indexed.inspect_component("name")["found"] is True
+    assert indexed.search_components("name")["matches"][0]["name"] == "name"
 
 
 def test_ingestion_ignores_runs_without_shared_input():

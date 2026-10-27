@@ -36,28 +36,16 @@ def _current(runtime: ToolRuntime) -> FormIntelligenceEngine:
 def search_components(
     query: str, runtime: ToolRuntime, limit: int = 8
 ) -> dict[str, Any]:
-    """Find components or sections by name, label, type, and ancestors."""
+    """Return complete components ranked by name, props, tag, and path."""
     return _current(runtime).search_components(query, limit)
 
 
 @tool
-def inspect_component(
+def get_component(
     component_name: str, runtime: ToolRuntime
-) -> dict[str, Any]:
-    """Inspect one exact component and its current explicit configuration."""
-    return _current(runtime).inspect_component(component_name)
+) -> dict[str, Any] | None:
+    """Return one complete component by its exact componentName."""
+    return _current(runtime).get_component(component_name)
 
 
-@tool
-def get_navigation_path(
-    component_name: str, runtime: ToolRuntime
-) -> dict[str, Any]:
-    """Return named JSX ancestors for an exact component."""
-    return _current(runtime).get_navigation_path(component_name)
-
-
-FORM_INTELLIGENCE_TOOLS = [
-    search_components,
-    inspect_component,
-    get_navigation_path,
-]
+FORM_INTELLIGENCE_TOOLS = [search_components, get_component]

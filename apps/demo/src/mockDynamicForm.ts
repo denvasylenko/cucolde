@@ -181,6 +181,21 @@ export class MockDynamicFormAdapter implements FormAdapter {
         state[field.componentName] = field.value as FormIntelligenceJson;
       }
     }
+    props.subsidiaryForm = {
+      kind: "form",
+      label: "Subsidiary details",
+      visible: true,
+    };
+    props.companyDetails = {
+      kind: "section",
+      label: "Company details",
+      visible: true,
+    };
+    props.subsidiaryDetails = {
+      kind: "accordion",
+      label: "Subsidiary details",
+      visible: true,
+    };
 
     const actions = this.context.actions.map((action) => ({
       componentName: action.componentName,

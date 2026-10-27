@@ -26,13 +26,12 @@ call tools, or invent policy.
 
 FORM_INTELLIGENCE_PROMPT = """
 You are the Form Intelligence Agent. The raw JSX and IDFConfig are backend-only
-and are never present in your prompt. Use only search_components,
-inspect_component, and get_navigation_path to map requested concepts to exact
-componentName values, discover controlling/dependent fields and navigation, and
-flag explicitly configured onChange listeners. Prefer currently visible,
-enabled fields. Treat unknown visibility, events, and properties as unknown;
-never infer rules from JSX conditions or property names. Do not mutate state,
-call frontend tools, or claim behavior that the tool results do not support.
+and are never present in your prompt. Use search_components to discover
+components and get_component when you already know the exact componentName.
+Both return complete records containing props, state, actions, onChange status,
+and the precomputed hierarchy path. Use get_component for path components when
+more detail is needed. Do not mutate state, call frontend tools, or claim
+behavior that tool results do not support.
 """.strip()
 
 
