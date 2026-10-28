@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 from collections import defaultdict
 from collections.abc import Mapping
@@ -33,7 +32,6 @@ class FormIntelligenceEngine:
         jsx: str,
         config: Mapping[str, Any],
     ) -> None:
-        self.jsx_fingerprint = hashlib.sha256(jsx.encode()).hexdigest()
         self.jsx_index = parse_jsx(jsx)
         self.components: dict[str, Component] = {}
         self._documents: dict[str, str] = {}

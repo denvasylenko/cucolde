@@ -6,28 +6,13 @@ from langchain.tools import ToolRuntime, tool
 
 from .engine import FormIntelligenceEngine
 
-_ENGINES: dict[str, FormIntelligenceEngine] = {}
-
-
-def session_key(config: dict[str, Any]) -> str:
-    for values in (config.get("configurable", {}), config.get("metadata", {})):
-        for name in ("thread_id", "threadId", "run_id"):
-            if values.get(name):
-                return str(values[name])
-    return "default"
-
-
-def set_engine(key: str, engine: FormIntelligenceEngine) -> None:
-    _ENGINES[key] = engine
-
-
-def get_engine(key: str) -> FormIntelligenceEngine | None:
-    return _ENGINES.get(key)
+ENGINE_CONTEXT_KEY = "form_intelligence_engine"
 
 
 def _current(runtime: ToolRuntime) -> FormIntelligenceEngine:
-    engine = get_engine(session_key(runtime.config))
-    if engine is None:
+    context = runtime.context
+    engine = context.get(ENGINE_CONTEXT_KEY) if isinstance(context, dict) else None
+    if not isinstance(engine, FormIntelligenceEngine):
         raise ValueError("The frontend has not supplied JSX and IDFConfig.")
     return engine
 

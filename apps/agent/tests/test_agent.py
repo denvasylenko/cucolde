@@ -44,7 +44,7 @@ def test_frontend_tools_are_available_only_to_filling(monkeypatch):
     }
     assert not any(
         isinstance(middleware, CopilotKitMiddleware)
-        for middleware in captured["middleware"]
+        for middleware in captured.get("middleware", [])
     )
     assert not any(
         isinstance(middleware, CopilotKitMiddleware)

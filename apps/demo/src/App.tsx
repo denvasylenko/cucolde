@@ -197,7 +197,7 @@ function App() {
             labels={{
               modalHeaderTitle: "Adaptive Form Guide",
               welcomeMessageText:
-                "Tell me what you want to complete, and I will inspect the current form before proposing changes.",
+                "hello.",
               chatInputPlaceholder: "Ask the guide to fill this form…",
             }}
           />

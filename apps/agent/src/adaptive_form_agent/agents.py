@@ -11,7 +11,8 @@ from langchain.agents.middleware import (
 from .handoffs import DomainReport, FillingDecision, FormIntelligenceReport
 from .form_intelligence.middleware import (
     FormAgentState,
-    ingest_form_intelligence_source,
+    build_form_intelligence_engine,
+    clear_form_intelligence_engine,
 )
 from .form_intelligence.tools import FORM_INTELLIGENCE_TOOLS
 from .prompts import (
@@ -51,6 +52,10 @@ def build_graph(model=None, subagent_model=None):
             "system_prompt": FORM_INTELLIGENCE_PROMPT,
             "response_format": FormIntelligenceReport,
             "tools": FORM_INTELLIGENCE_TOOLS,
+            "middleware": [
+                build_form_intelligence_engine,
+                clear_form_intelligence_engine,
+            ],
         },
         {
             "name": "filling",
@@ -70,9 +75,6 @@ def build_graph(model=None, subagent_model=None):
         model=supervisor_model,
         system_prompt=SUPERVISOR_PROMPT,
         subagents=subagents,
-        middleware=[
-            ingest_form_intelligence_source
-        ],
         state_schema=FormAgentState,
         checkpointer=InMemorySaver(),
     )

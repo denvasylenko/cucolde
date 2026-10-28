@@ -15,12 +15,16 @@
         "8000",
         "--env-file",
         ".env",
+        "--reload",
+        "--reload-dir",
+        "src",
         "--log-level",
         "debug"
       ],
       "cwd": "${workspaceFolder}/apps/agent",
       "envFile": "${workspaceFolder}/apps/agent/.env",
       "console": "integratedTerminal",
+      "subProcess": true,
       "justMyCode": true
     }
   ]
