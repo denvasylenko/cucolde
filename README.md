@@ -9,12 +9,12 @@ CopilotKit v2 and a Python Deep Agents supervisor.
   discovery, refresh outcomes, validation, and guidance.
 - A reusable React bridge that synchronizes a serializable `{ jsx, idfConfig }`
   source and registers form operations as CopilotKit v2 frontend tools.
-- A Python Deep Agent supervisor with Domain, Form Intelligence, and Filling
-  specialists. CopilotKit exposes frontend tools only to the Filling specialist;
-  the supervisor, Domain, and Form Intelligence agents cannot call them.
+- A guidance-first Python Deep Agent supervisor that owns targeted form lookup
+  and explicitly requested frontend operations. A single Domain sub-agent keeps
+  large business/document evidence out of the supervisor context.
 - A backend-only Form Intelligence index with tree-sitter TSX parsing,
   precomputed navigation paths, flattened IDFConfig records, and RapidFuzz
-  retrieval. Raw JSX and IDFConfig state is removed before any model call.
+  retrieval. Raw JSX and IDFConfig are never surfaced in a model prompt.
 - A demo DynamicForm adapter that reproduces a Java-backed `onChange` refresh:
   the controlling `hasSubsidiary` patch reveals dependent fields, increments
   `configRevision`, and forces reassessment before the remaining patch.
@@ -50,9 +50,8 @@ VITE_AGENT_URL=http://localhost:8000/agent/adaptive-form-guide npm run dev
 When `VITE_AGENT_URL` is absent, the demo intentionally runs in deterministic
 walkthrough mode and does not mount the CopilotKit runtime connection.
 
-Models are configurable with `FORM_GUIDE_SUPERVISOR_MODEL`,
-`FORM_GUIDE_DOMAIN_MODEL`, `FORM_GUIDE_INTELLIGENCE_MODEL`, and
-`FORM_GUIDE_FILLING_MODEL`.
+Models are configurable with `FORM_GUIDE_SUPERVISOR_MODEL` and
+`FORM_GUIDE_DOMAIN_MODEL`.
 
 ## Verify
 

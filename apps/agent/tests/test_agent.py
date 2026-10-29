@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage
 from adaptive_form_agent import agents
 from adaptive_form_agent.agents import build_graph
 from adaptive_form_agent.api import create_app
+from adaptive_form_agent.handoffs import DomainReport
 from adaptive_form_agent.prompts import SUPERVISOR_PROMPT
 
 
@@ -29,7 +30,7 @@ def test_deep_agent_graph_builds_with_specialists():
     assert graph.checkpointer is not True
 
 
-def test_frontend_tools_are_available_only_to_filling(monkeypatch):
+def test_supervisor_owns_form_tools_and_domain_is_isolated(monkeypatch):
     captured = {}
 
     def capture_deep_agent(**kwargs):
@@ -42,30 +43,36 @@ def test_frontend_tools_are_available_only_to_filling(monkeypatch):
     specialists = {
         specialist["name"]: specialist for specialist in captured["subagents"]
     }
-    assert not any(
+    assert list(specialists) == ["domain"]
+    assert [tool.name for tool in captured["tools"]] == [
+        "search_components",
+        "get_component",
+    ]
+    assert any(
         isinstance(middleware, CopilotKitMiddleware)
-        for middleware in captured.get("middleware", [])
+        for middleware in captured["middleware"]
     )
     assert not any(
         isinstance(middleware, CopilotKitMiddleware)
         for middleware in specialists["domain"].get("middleware", [])
     )
-    assert not any(
-        isinstance(middleware, CopilotKitMiddleware)
-        for middleware in specialists["form_intelligence"].get("middleware", [])
-    )
-    assert any(
-        isinstance(middleware, CopilotKitMiddleware)
-        for middleware in specialists["filling"]["middleware"]
-    )
+    assert specialists["domain"]["response_format"] is DomainReport
+    assert [tool.name for tool in specialists["domain"]["tools"]] == []
 
 
-def test_supervisor_prompt_enforces_read_only_trajectory():
+def test_supervisor_prompt_is_guidance_first_and_mutation_safe():
     required_steps = [
-        "raw JSX and IDFConfig are never available",
-        "Ask form_intelligence",
-        "Do not call frontend tools",
-        "Never submit, save",
+        "not a form crawler or an automatic pre-filler",
+        "Answer directly",
+        "Ask one focused clarification",
+        "Delegate to domain only",
+        "Do not enumerate the form",
+        "explicitly asks to",
+        "Never infer missing dependencies",
+        "Do not mutate a disabled component",
+        "use only returned IDs",
+        "Configuration revisions are supplied internally",
+        "Never submit or save",
     ]
     for step in required_steps:
         assert step in SUPERVISOR_PROMPT

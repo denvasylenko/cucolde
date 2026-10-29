@@ -36,6 +36,6 @@ def build_form_intelligence_engine(
 def clear_form_intelligence_engine(
     _state: FormAgentState, runtime: Runtime
 ) -> None:
-    """Discard the engine after the Form Intelligence sub-agent finishes."""
+    """Discard the engine after the supervisor run finishes."""
     if isinstance(runtime.context, dict):
         runtime.context.pop(ENGINE_CONTEXT_KEY, None)

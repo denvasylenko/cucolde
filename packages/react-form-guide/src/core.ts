@@ -7,6 +7,7 @@ import {
   optionQuerySchema,
   setFormStateRequestSchema,
 } from "@adaptive-form-guide/contracts";
+import type { z } from "zod";
 
 export type FormIntelligenceJson =
   | string
@@ -68,29 +69,50 @@ export function createAdaptiveFormFrontendTools(
   agentId?: string,
 ) {
   const handlers = createFrontendToolHandlers(adapter);
+  const setFormStateToolSchema = setFormStateRequestSchema.omit({
+    expectedRevision: true,
+  });
+  const optionToolSchema = optionQuerySchema.omit({
+    expectedRevision: true,
+  });
+  type SetFormStateToolInput = z.infer<typeof setFormStateToolSchema>;
+  type OptionToolInput = z.infer<typeof optionToolSchema>;
+
   return [
     {
       name: "setFormState",
       description:
-        "Apply typed field patches in the browser using the current configuration revision.",
-      parameters: setFormStateRequestSchema,
-      handler: handlers.setFormState,
+        "Apply typed field patches to the current browser form snapshot.",
+      parameters: setFormStateToolSchema,
+      handler: (input: SetFormStateToolInput) =>
+        handlers.setFormState({
+          ...input,
+          expectedRevision: adapter.getContext().configRevision,
+        }),
       agentId,
     },
     {
       name: "getDropdownOptions",
       description:
         "Get valid dropdown options for a component from the frontend data source.",
-      parameters: optionQuerySchema,
-      handler: handlers.getDropdownOptions,
+      parameters: optionToolSchema,
+      handler: (input: OptionToolInput) =>
+        handlers.getDropdownOptions({
+          ...input,
+          expectedRevision: adapter.getContext().configRevision,
+        }),
       agentId,
     },
     {
       name: "searchInputOptions",
       description:
         "Search valid options for a search-input component using at least two characters.",
-      parameters: optionQuerySchema,
-      handler: handlers.searchInputOptions,
+      parameters: optionToolSchema,
+      handler: (input: OptionToolInput) =>
+        handlers.searchInputOptions({
+          ...input,
+          expectedRevision: adapter.getContext().configRevision,
+        }),
       agentId,
     },
   ];

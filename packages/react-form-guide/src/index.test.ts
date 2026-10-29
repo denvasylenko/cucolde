@@ -72,6 +72,43 @@ describe("frontend tool handlers", () => {
     );
   });
 
+  it("injects the current revision instead of exposing it to the agent", async () => {
+    const instance = adapter();
+    const tools = createAdaptiveFormFrontendTools(instance);
+    const setFormState = tools.find((tool) => tool.name === "setFormState")!;
+    const getDropdownOptions = tools.find(
+      (tool) => tool.name === "getDropdownOptions",
+    )!;
+
+    expect("expectedRevision" in setFormState.parameters.shape).toBe(false);
+    expect("expectedRevision" in getDropdownOptions.parameters.shape).toBe(
+      false,
+    );
+
+    const setHandler = setFormState.handler as (
+      input: Omit<SetFormStateRequest, "expectedRevision">,
+    ) => Promise<RefreshOutcome>;
+    const optionsHandler = getDropdownOptions.handler as (
+      input: Omit<OptionQuery, "expectedRevision">,
+    ) => Promise<unknown>;
+
+    await setHandler({
+      patches: [{ componentName: "hasSubsidiary", value: "yes" }],
+      sideEffectIntent: "allow-config-refresh",
+    });
+    await optionsHandler({
+      componentName: "country",
+      page: 1,
+    });
+
+    expect(instance.setFormState).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedRevision: 3 }),
+    );
+    expect(instance.getDropdownOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedRevision: 3 }),
+    );
+  });
+
   it("publishes raw form intelligence data in shared agent state", () => {
     const source = {
       formId: "test",
