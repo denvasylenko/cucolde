@@ -21,6 +21,31 @@ describe("MockDynamicFormAdapter", () => {
     });
   });
 
+  it("publishes two partial-submit scopes and explicit errors", () => {
+    const source = new MockDynamicFormAdapter().getIntelligenceSource();
+    const actions = source.idfConfig.actions as Array<{
+      componentName: string;
+      event: string;
+      collect: string[];
+    }>;
+    const props = source.idfConfig.props as Record<
+      string,
+      Record<string, unknown>
+    >;
+
+    expect(
+      actions
+        .filter((action) => action.event === "onPartialSubmit")
+        .map((action) => [action.componentName, action.collect]),
+    ).toEqual([
+      ["saveCompany", ["companyName", "hasSubsidiary"]],
+      ["saveSubsidiary", ["subsidiaryName", "subsidiaryCountry", "parentCompany"]],
+    ]);
+    expect(source.jsx).toContain('componentName="saveSubsidiary"');
+    expect(props.companyName.errors).toEqual([]);
+    expect(props.saveCompany.kind).toBe("button");
+  });
+
   it("refreshes configuration after the controlling patch", async () => {
     const adapter = new MockDynamicFormAdapter();
     const result = await adapter.setFormState({

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import lru_cache
 
 import tree_sitter_typescript
 from tree_sitter import Language, Node, Parser, Query, QueryCursor
@@ -32,8 +33,12 @@ class JSXComponent:
     path: tuple[str, ...]
 
 
+@lru_cache(maxsize=32)
 def parse_jsx(jsx: str) -> dict[str, JSXComponent]:
-    """Capture every named JSX element and calculate its named ancestor path."""
+    """Capture every named JSX element and calculate its named ancestor path.
+
+    The result is cached per source string and must be treated as read-only.
+    """
     source = jsx.encode()
     tree = Parser(_LANGUAGE).parse(source)
     matches = [

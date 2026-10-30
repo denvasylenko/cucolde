@@ -8,10 +8,12 @@ import type {
 } from "@adaptive-form-guide/contracts";
 
 import {
-  createAdaptiveFormFrontendTools,
   createFormIntelligenceState,
   createFrontendToolHandlers,
+  isFormOperation,
+  runFormOperation,
   type FormAdapter,
+  type FormIntelligenceSource,
 } from "./core";
 
 const context: FormContext = {
@@ -24,9 +26,16 @@ const context: FormContext = {
   navigation: {},
 };
 
+const freshSource: FormIntelligenceSource = {
+  formId: "test",
+  jsx: '<Field componentName="companyName" />',
+  idfConfig: { props: {}, state: {}, actions: [], events: { onChange: {} } },
+};
+
 function adapter(): FormAdapter {
   return {
     getContext: () => context,
+    getIntelligenceSource: () => freshSource,
     setFormState: vi.fn(
       async (request: SetFormStateRequest): Promise<RefreshOutcome> => ({
         status: "applied",
@@ -55,72 +64,98 @@ function adapter(): FormAdapter {
   };
 }
 
-describe("frontend tool handlers", () => {
-  it("registers form operations as CopilotKit frontend tools", () => {
-    const tools = createAdaptiveFormFrontendTools(
-      adapter(),
-      "adaptive_form_guide",
-    );
-
-    expect(tools.map((tool) => tool.name)).toEqual([
-      "setFormState",
-      "getDropdownOptions",
-      "searchInputOptions",
-    ]);
-    expect(tools.every((tool) => tool.agentId === "adaptive_form_guide")).toBe(
+describe("form operations requested through interrupts", () => {
+  it("recognizes only form-operation payloads", () => {
+    expect(isFormOperation({ type: "form-operation", operation: "x" })).toBe(
       true,
     );
+    expect(
+      isFormOperation(JSON.stringify({ type: "form-operation" })),
+    ).toBe(true);
+    expect(isFormOperation("not json")).toBe(false);
+    expect(isFormOperation({ type: "approval" })).toBe(false);
+    expect(isFormOperation(null)).toBe(false);
   });
 
-  it("injects the current revision instead of exposing it to the agent", async () => {
+  it("injects the latest revision and returns the refreshed source", async () => {
     const instance = adapter();
-    const tools = createAdaptiveFormFrontendTools(instance);
-    const setFormState = tools.find((tool) => tool.name === "setFormState")!;
-    const getDropdownOptions = tools.find(
-      (tool) => tool.name === "getDropdownOptions",
-    )!;
 
-    expect("expectedRevision" in setFormState.parameters.shape).toBe(false);
-    expect("expectedRevision" in getDropdownOptions.parameters.shape).toBe(
-      false,
-    );
-
-    const setHandler = setFormState.handler as (
-      input: Omit<SetFormStateRequest, "expectedRevision">,
-    ) => Promise<RefreshOutcome>;
-    const optionsHandler = getDropdownOptions.handler as (
-      input: Omit<OptionQuery, "expectedRevision">,
-    ) => Promise<unknown>;
-
-    await setHandler({
+    const result = await runFormOperation(instance, {
+      type: "form-operation",
+      operation: "setFormState",
       patches: [{ componentName: "hasSubsidiary", value: "yes" }],
       sideEffectIntent: "allow-config-refresh",
-    });
-    await optionsHandler({
-      componentName: "country",
-      page: 1,
     });
 
     expect(instance.setFormState).toHaveBeenCalledWith(
       expect.objectContaining({ expectedRevision: 3 }),
     );
+    expect(result).toEqual({
+      outcome: expect.objectContaining({ status: "applied", configRevision: 4 }),
+      intelligenceSource: freshSource,
+    });
+  });
+
+  it("accepts the JSON-string payload delivered by AG-UI", async () => {
+    const instance = adapter();
+
+    await runFormOperation(
+      instance,
+      JSON.stringify({
+        type: "form-operation",
+        operation: "setFormState",
+        patches: [{ componentName: "hasSubsidiary", value: "yes" }],
+        sideEffectIntent: "allow-config-refresh",
+      }),
+    );
+
+    expect(instance.setFormState).toHaveBeenCalledOnce();
+  });
+
+  it("runs option lookups with the latest revision", async () => {
+    const instance = adapter();
+
+    const dropdown = await runFormOperation(instance, {
+      type: "form-operation",
+      operation: "getDropdownOptions",
+      componentName: "country",
+      page: 1,
+    });
+    await runFormOperation(instance, {
+      type: "form-operation",
+      operation: "searchInputOptions",
+      componentName: "parent",
+      term: "glob",
+      page: 1,
+    });
+
+    expect(dropdown).toMatchObject({ options: [{ id: "yes" }] });
     expect(instance.getDropdownOptions).toHaveBeenCalledWith(
       expect.objectContaining({ expectedRevision: 3 }),
     );
+    expect(instance.searchInputOptions).toHaveBeenCalledWith(
+      expect.objectContaining({ expectedRevision: 3, term: "glob" }),
+    );
   });
 
-  it("publishes raw form intelligence data in shared agent state", () => {
-    const source = {
-      formId: "test",
-      jsx: '<Field componentName="companyName" />',
-      idfConfig: {
-        props: { companyName: { label: "Company name", sensitive: true } },
-        state: { companyName: "backend-only" },
-      },
-    };
+  it("returns an error instead of throwing for an invalid payload", async () => {
+    const instance = adapter();
 
-    expect(createFormIntelligenceState(source)).toEqual({
-      formIntelligenceInput: source,
+    const result = await runFormOperation(instance, {
+      type: "form-operation",
+      operation: "setFormState",
+      patches: [],
+    });
+
+    expect(result).toHaveProperty("error");
+    expect(instance.setFormState).not.toHaveBeenCalled();
+  });
+});
+
+describe("frontend handlers", () => {
+  it("publishes raw form intelligence data in shared agent state", () => {
+    expect(createFormIntelligenceState(freshSource)).toEqual({
+      formIntelligenceInput: freshSource,
     });
   });
 

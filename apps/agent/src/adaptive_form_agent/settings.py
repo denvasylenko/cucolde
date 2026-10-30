@@ -10,6 +10,8 @@ class Settings(BaseSettings):
 
     supervisor_model: str = "openai:gpt-5.4"
     domain_model: str = "openai:gpt-5.4-mini"
+    intelligence_model: str = "openai:gpt-5.4-mini"
+    filling_model: str = "openai:gpt-5.4-mini"
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
 
 

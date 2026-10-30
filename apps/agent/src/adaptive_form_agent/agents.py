@@ -1,55 +1,62 @@
-from copilotkit import CopilotKitMiddleware, LangGraphAGUIAgent
+from copilotkit import LangGraphAGUIAgent
 from deepagents import create_deep_agent
 from langgraph.checkpoint.memory import InMemorySaver
-from langchain.agents.middleware import ModelRequest
 
-from .handoffs import DomainReport
-from .form_intelligence.middleware import (
-    FormAgentState,
-    build_form_intelligence_engine,
-    clear_form_intelligence_engine,
+from .form_intelligence.filling_tools import FILLING_TOOLS
+from .form_intelligence.state import FormAgentState
+from .form_intelligence.tools import FORM_INTELLIGENCE_TOOLS, get_component
+from .handoffs import DomainReport, FillerReport, FormIntelligenceReport
+from .prompts import (
+    DOMAIN_PROMPT,
+    FILLING_PROMPT,
+    FORM_INTELLIGENCE_PROMPT,
+    SUPERVISOR_PROMPT,
 )
-from .form_intelligence.tools import FORM_INTELLIGENCE_TOOLS
-from .prompts import DOMAIN_PROMPT, SUPERVISOR_PROMPT
 from .settings import settings
-
-
-class FrontendToolsOnlyMiddleware(CopilotKitMiddleware):
-    """Inject frontend tools without serializing runtime dependencies."""
-
-    def _apply_app_context_note(self, request: ModelRequest) -> ModelRequest:
-        return request
 
 
 def build_graph(model=None, subagent_model=None):
     """Build the Deep Agent graph without invoking a model."""
-    supervisor_model = model or settings.supervisor_model
-    domain_model = subagent_model or settings.domain_model
-
     subagents = [
         {
             "name": "domain",
             "description": (
                 "Interprets domain terminology, rules, prerequisites, and consequences."
             ),
-            "model": domain_model,
+            "model": subagent_model or settings.domain_model,
             "system_prompt": DOMAIN_PROMPT,
             "response_format": DomainReport,
             "tools": [],
+        },
+        {
+            "name": "form_intelligence",
+            "description": (
+                "Read-only form exploration: finds components, which actions or "
+                "buttons cover them, and what remains missing or has errors."
+            ),
+            "model": subagent_model or settings.intelligence_model,
+            "system_prompt": FORM_INTELLIGENCE_PROMPT,
+            "response_format": FormIntelligenceReport,
+            "tools": FORM_INTELLIGENCE_TOOLS,
+        },
+        {
+            "name": "filling",
+            "description": (
+                "Changes the form: sets authorized values and looks up dropdown "
+                "or search options. Needs exact componentNames and values."
+            ),
+            "model": subagent_model or settings.filling_model,
+            "system_prompt": FILLING_PROMPT,
+            "response_format": FillerReport,
+            "tools": [get_component, *FILLING_TOOLS],
         },
     ]
 
     return create_deep_agent(
         name="adaptive_form_supervisor",
-        model=supervisor_model,
+        model=model or settings.supervisor_model,
         system_prompt=SUPERVISOR_PROMPT,
-        tools=FORM_INTELLIGENCE_TOOLS,
         subagents=subagents,
-        middleware=[
-            build_form_intelligence_engine,
-            FrontendToolsOnlyMiddleware(),
-            clear_form_intelligence_engine,
-        ],
         state_schema=FormAgentState,
         checkpointer=InMemorySaver(),
     )

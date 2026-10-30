@@ -1,7 +1,11 @@
 import pytest
 from pydantic import ValidationError
 
-from adaptive_form_agent.handoffs import DomainReport
+from adaptive_form_agent.handoffs import (
+    DomainReport,
+    FillerReport,
+    FormIntelligenceReport,
+)
 
 
 def test_domain_report_carries_conclusions_and_requested_form_facts():
@@ -31,3 +35,35 @@ def test_domain_report_rejects_unstructured_extra_fields():
 def test_domain_report_rejects_unknown_status():
     with pytest.raises(ValidationError):
         DomainReport(status="waiting", summary="Not started")
+
+
+def test_form_intelligence_report_carries_names_not_component_records():
+    report = FormIntelligenceReport(
+        status="completed",
+        findings=["Two required fields are empty."],
+        components=["subsidiaryName"],
+        actions=[{"componentName": "saveSubsidiary", "event": "onPartialSubmit"}],
+    )
+
+    payload = report.model_dump(by_alias=True)
+    assert payload["components"] == ["subsidiaryName"]
+    assert payload["actions"] == [
+        {"componentName": "saveSubsidiary", "event": "onPartialSubmit"}
+    ]
+    with pytest.raises(ValidationError):
+        FormIntelligenceReport(status="completed", props={"raw": "record"})
+
+
+def test_filler_report_records_rejections_and_refresh():
+    report = FillerReport(
+        status="partially_applied",
+        applied=["hasSubsidiary"],
+        rejected=[{"componentName": "ghost", "reason": "Unknown component."}],
+        configurationRefreshed=True,
+    )
+
+    payload = report.model_dump(by_alias=True)
+    assert payload["configurationRefreshed"] is True
+    assert payload["rejected"] == [
+        {"componentName": "ghost", "reason": "Unknown component."}
+    ]

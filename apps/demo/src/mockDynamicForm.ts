@@ -23,10 +23,12 @@ const formJsx = `
       componentName="hasSubsidiary"
       label="Does the company have a subsidiary?"
     />
+    <Button componentName="saveCompany" label="Save company details" />
     <Accordion componentName="subsidiaryDetails" title="Subsidiary details">
       <TextInput componentName="subsidiaryName" label="Subsidiary legal name" />
       <Dropdown componentName="subsidiaryCountry" label="Country of registration" />
       <SearchInput componentName="parentCompany" label="Ultimate parent company" />
+      <Button componentName="saveSubsidiary" label="Save subsidiary details" />
     </Accordion>
   </Section>
 </DynamicForm>
@@ -150,6 +152,20 @@ function createInitialContext(): FormContext {
         collect: ["hasSubsidiary"],
         mutatesConfiguration: true,
       },
+      {
+        componentName: "saveCompany",
+        event: "onPartialSubmit",
+        validate: ["companyName", "hasSubsidiary"],
+        collect: ["companyName", "hasSubsidiary"],
+        mutatesConfiguration: false,
+      },
+      {
+        componentName: "saveSubsidiary",
+        event: "onPartialSubmit",
+        validate: ["subsidiaryName", "subsidiaryCountry"],
+        collect: ["subsidiaryName", "subsidiaryCountry", "parentCompany"],
+        mutatesConfiguration: false,
+      },
     ],
     navigation: { subsidiaryDetails: "Company / Subsidiary details" },
   };
@@ -174,6 +190,7 @@ export class MockDynamicFormAdapter implements FormAdapter {
         disabled: field.disabled,
         visible: field.visible,
         sensitive: field.sensitive,
+        errors: field.errors,
         dependsOn: field.dependsOn,
         choiceMode: field.choiceMode,
       };
@@ -189,6 +206,16 @@ export class MockDynamicFormAdapter implements FormAdapter {
     props.companyDetails = {
       kind: "section",
       label: "Company details",
+      visible: true,
+    };
+    props.saveCompany = {
+      kind: "button",
+      label: "Save company details",
+      visible: true,
+    };
+    props.saveSubsidiary = {
+      kind: "button",
+      label: "Save subsidiary details",
       visible: true,
     };
     props.subsidiaryDetails = {

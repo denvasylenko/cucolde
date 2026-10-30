@@ -20,8 +20,23 @@ class Component:
     path: tuple[str, ...]
     props: dict[str, Any]
     state: Any
+    has_value: bool
     actions: tuple[dict[str, Any], ...]
     on_change: bool
+
+
+def _has_value(value: Any) -> bool:
+    return value not in (None, "", [], {})
+
+
+def _is_missing_required(component: Component) -> bool:
+    props = component.props
+    return (
+        props.get("required") is True
+        and props.get("visible") is not False
+        and props.get("disabled") is not True
+        and not component.has_value
+    )
 
 
 class FormIntelligenceEngine:
@@ -34,6 +49,7 @@ class FormIntelligenceEngine:
     ) -> None:
         self.jsx_index = parse_jsx(jsx)
         self.components: dict[str, Component] = {}
+        self._actions: list[dict[str, Any]] = []
         self._documents: dict[str, str] = {}
         self.update_config(config)
 
@@ -41,9 +57,10 @@ class FormIntelligenceEngine:
         """Attach the canonical config snapshot to the static JSX index."""
         props = config["props"]
         state = config["state"]
+        self._actions = [dict(action) for action in config["actions"]]
         actions_by_name: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        for action in config["actions"]:
-            actions_by_name[action["componentName"]].append(dict(action))
+        for action in self._actions:
+            actions_by_name[action["componentName"]].append(action)
         on_change = config["events"]["onChange"]
 
         self.components = {
@@ -57,6 +74,7 @@ class FormIntelligenceEngine:
                     if props[name].get("sensitive") is True
                     else state.get(name)
                 ),
+                has_value=_has_value(state.get(name)),
                 actions=tuple(actions_by_name[name]),
                 on_change=bool(on_change.get(name)),
             )
@@ -94,3 +112,48 @@ class FormIntelligenceEngine:
         """Return one complete component record by its exact componentName."""
         component = self.components.get(component_name)
         return asdict(component) if component is not None else None
+
+    def find_actions(
+        self,
+        component_names: list[str] | None = None,
+        event: str | None = None,
+    ) -> dict[str, Any]:
+        """Return compact action scopes, optionally filtered.
+
+        An action matches `component_names` when its trigger, `collect`, or
+        `validate` mentions any of them. `missing_required` counts components in
+        the action scope that are explicitly required, not hidden or disabled,
+        and have no value. `with_errors` lists scope components with explicit
+        errors. These are facts only: scope membership does not prove validity
+        and neither list means the form is ready to submit.
+        """
+        wanted = set(component_names or ())
+        results = []
+        for action in self._actions:
+            scope = list(dict.fromkeys([*action["collect"], *action["validate"]]))
+            if event is not None and action["event"] != event:
+                continue
+            if wanted and wanted.isdisjoint([action["componentName"], *scope]):
+                continue
+            trigger = self.components[action["componentName"]]
+            members = [self.components[name] for name in scope]
+            results.append(
+                {
+                    "trigger": {
+                        "name": trigger.name,
+                        "label": trigger.props.get("label"),
+                        "path": trigger.path,
+                    },
+                    "event": action["event"],
+                    "collect": action["collect"],
+                    "validate": action["validate"],
+                    "mutatesConfiguration": action["mutatesConfiguration"],
+                    "missing_required": [
+                        member.name for member in members if _is_missing_required(member)
+                    ],
+                    "with_errors": [
+                        member.name for member in members if member.props.get("errors")
+                    ],
+                }
+            )
+        return {"actions": results}
